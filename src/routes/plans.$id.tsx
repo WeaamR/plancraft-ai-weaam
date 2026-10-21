@@ -72,6 +72,11 @@ function Details() {
               </Button>
             )}
           </section>
+          {data.plan && data.request.status === "failed" && (
+            <p className="mt-6 text-sm text-muted-foreground" role="status">
+              The latest generation attempt failed. Your previously saved plan is shown below.
+            </p>
+          )}
           {isAlreadyGenerated(data.request.status, !!data.plan) && data.plan ? <PlanView plan={data.plan} /> : (
             <div className="mt-6 rounded-2xl border border-dashed p-8 text-center text-muted-foreground">
               {data.request.status === "processing" && !isGenerationLocked(data.request.status, data.request.updated_at) ? (

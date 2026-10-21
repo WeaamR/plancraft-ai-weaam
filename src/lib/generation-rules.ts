@@ -8,7 +8,7 @@ export function isGenerationLocked(status: string, updatedAt: string, now = Date
   return status === "processing" && now - new Date(updatedAt).getTime() < STALE_PROCESSING_MS;
 }
 
-/** True when the request already has its finished plan; generating again is blocked. */
-export function isAlreadyGenerated(status: string, hasPlan: boolean): boolean {
-  return status === "completed" && hasPlan;
+/** A saved plan remains available and blocks regeneration regardless of run status. */
+export function isAlreadyGenerated(_status: string, hasPlan: boolean): boolean {
+  return hasPlan;
 }
