@@ -12,7 +12,7 @@ const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : unde
 function textOf(v: unknown): string | undefined {
   if (typeof v === "string") return str(v);
   if (v && typeof v === "object") {
-    const o = v as Record<string, unknown>;
+    const o = v as Partial<Record<"title"|"action"|"risk"|"name"|"description"|"mitigation", unknown>>;
     const parts = [str(o.title) ?? str(o.action) ?? str(o.risk) ?? str(o.name), str(o.description) ?? str(o.mitigation)];
     const t = parts.filter(Boolean).join(" — ");
     return t || undefined;
@@ -30,7 +30,7 @@ export function parsePhases(v: unknown): Phase[] {
     .map((p): Phase | null => {
       if (typeof p === "string") return str(p) ? { title: p, actions: [] } : null;
       if (!p || typeof p !== "object") return null;
-      const o = p as Record<string, unknown>;
+      const o = p as { [k: string]: unknown } & Partial<Record<"title"|"name"|"objective"|"description"|"actions"|"priority", unknown>>;
       const phase: Phase = {
         title: str(o.title) ?? str(o.name),
         objective: str(o.objective),
