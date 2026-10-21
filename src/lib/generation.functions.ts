@@ -1,9 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-// A request stuck in "processing" longer than this (n8n died without reporting
-// back) may be retried; otherwise processing requests are locked.
-const STALE_PROCESSING_MS = 5 * 60 * 1000;
+import { isAlreadyGenerated, isGenerationLocked } from "./generation-rules";
 
 /**
  * Integration point for n8n Cloud. Reads N8N_WEBHOOK_URL (and optional
@@ -27,12 +25,10 @@ export const triggerPlanGeneration = createServerFn({ method: "POST" })
 
     const { data: existingPlan } = await db
       .from("project_plans").select("id").eq("request_id", data.id).maybeSingle();
-    if (req.status === "completed" && existingPlan)
+    if (isAlreadyGenerated(req.status, !!existingPlan))
       return { ok: false, connected: true, message: "This plan has already been generated." };
 
-    const isFreshProcessing =
-      req.status === "processing" && Date.now() - new Date(req.updated_at).getTime() < STALE_PROCESSING_MS;
-    if (isFreshProcessing)
+    if (isGenerationLocked(req.status, req.updated_at))
       return { ok: false, connected: true, message: "This plan is already being generated." };
 
     // Atomic claim: only one caller can move the request into "processing",
