@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+// A request stuck in "processing" longer than this (n8n died without reporting
+// back) may be retried; otherwise processing requests are locked.
+const STALE_PROCESSING_MS = 5 * 60 * 1000;
+
 /**
  * Integration point for n8n Cloud. Reads N8N_WEBHOOK_URL (and optional
  * N8N_WEBHOOK_SECRET) from server env. Until those are configured it returns
@@ -20,10 +24,29 @@ export const triggerPlanGeneration = createServerFn({ method: "POST" })
     const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
     const { data: req } = await db.from("project_requests").select("*").eq("id", data.id).maybeSingle();
     if (!req) return { ok: false, connected: true, message: "Request not found." };
-    if (req.status === "processing")
+
+    const { data: existingPlan } = await db
+      .from("project_plans").select("id").eq("request_id", data.id).maybeSingle();
+    if (req.status === "completed" && existingPlan)
+      return { ok: false, connected: true, message: "This plan has already been generated." };
+
+    const isFreshProcessing =
+      req.status === "processing" && Date.now() - new Date(req.updated_at).getTime() < STALE_PROCESSING_MS;
+    if (isFreshProcessing)
       return { ok: false, connected: true, message: "This plan is already being generated." };
 
-    await db.from("project_requests").update({ status: "processing" }).eq("id", data.id);
+    // Atomic claim: only one caller can move the request into "processing",
+    // so double clicks / parallel calls can never start two n8n runs.
+    const { data: claimed } = await db
+      .from("project_requests")
+      .update({ status: "processing" })
+      .eq("id", data.id)
+      .eq("status", req.status)
+      .eq("updated_at", req.updated_at)
+      .select("id");
+    if (!claimed || claimed.length === 0)
+      return { ok: false, connected: true, message: "This plan is already being generated." };
+
     try {
       const headers: Record<string, string> = { "content-type": "application/json" };
       const secret = process.env["N8N_WEBHOOK_SECRET"];
@@ -34,11 +57,11 @@ export const triggerPlanGeneration = createServerFn({ method: "POST" })
         body: JSON.stringify({ request_id: req.id }),
         signal: AbortSignal.timeout(15000),
       });
-      if (!res.ok) throw new Error(`n8n responded ${res.status}`);
+      if (!res.ok) throw new Error(`n8n responded ${res.status}: ${await res.text().catch(() => "")}`);
       return { ok: true, connected: true, message: "Generation started. This page will update when the plan is ready." };
     } catch (e) {
-      console.error(e);
-      await db.from("project_requests").update({ status: "failed" }).eq("id", data.id);
+      console.error("[n8n] webhook call failed", e);
+      await db.from("project_requests").update({ status: "failed" }).eq("id", data.id).eq("status", "processing");
       return { ok: false, connected: true, message: "Could not reach the automation service. Please try again later." };
     }
   });

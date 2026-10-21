@@ -64,10 +64,12 @@ function Details() {
             <Field label="Description" value={data.request.description} />
             <Field label="Main goal" value={data.request.goal} />
             <Field label="Additional context" value={data.request.additional_context} />
-            <Button className="mt-6" onClick={() => gen.mutate()}
-              disabled={gen.isPending || data.request.status === "processing"}>
-              {gen.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Generate My Plan
-            </Button>
+            {!(data.request.status === "completed" && data.plan) && (
+              <Button className="mt-6" onClick={() => { if (!gen.isPending) gen.mutate(); }}
+                disabled={gen.isPending || data.request.status === "processing"}>
+                {gen.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Generate My Plan
+              </Button>
+            )}
           </section>
           {data.request.status === "completed" && data.plan ? <PlanView plan={data.plan} /> : (
             <div className="mt-6 rounded-2xl border border-dashed p-8 text-center text-muted-foreground">
