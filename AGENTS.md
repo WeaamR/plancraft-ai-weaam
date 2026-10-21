@@ -12,4 +12,4 @@
 ## Architecture
 - PlanCraft tables have RLS on with no public policies; all reads/writes go through validated server functions in src/lib/*.functions.ts using the service role — no auth yet, so the browser must never touch tables directly.
 - n8n is triggered only from src/lib/generation.functions.ts via server env N8N_WEBHOOK_URL (+ optional N8N_WEBHOOK_SECRET); n8n writes project_plans and request status itself, the UI polls while status is processing.
-- Generation lock rules live in src/lib/generation-rules.ts (shared by UI and server); the server claims a request with a conditional status+updated_at update so only one n8n run can start per request.
+- Generation lock rules live in src/lib/generation-rules.ts (shared by UI and server); a saved plan stays visible and blocks regeneration regardless of request status, and the server claims a request with a conditional status+updated_at update so only one n8n run can start per request.

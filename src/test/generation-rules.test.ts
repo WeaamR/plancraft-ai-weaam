@@ -18,4 +18,10 @@ describe("generation rules", () => {
     expect(isAlreadyGenerated("completed", true)).toBe(true);
     expect(isAlreadyGenerated("completed", false)).toBe(false);
   });
+  it("blocks regeneration of a saved plan after a failed attempt", () => {
+    expect(isAlreadyGenerated("failed", true)).toBe(true);
+  });
+  it("keeps a saved plan available while status is processing", () => {
+    expect(isAlreadyGenerated("processing", true)).toBe(true);
+  });
 });
