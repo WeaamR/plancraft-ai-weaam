@@ -69,9 +69,17 @@ function Details() {
               {gen.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Generate My Plan
             </Button>
           </section>
-          {data.plan ? <PlanView plan={data.plan} /> : (
+          {data.request.status === "completed" && data.plan ? <PlanView plan={data.plan} /> : (
             <div className="mt-6 rounded-2xl border border-dashed p-8 text-center text-muted-foreground">
-              This request has been saved. AI plan generation will be available once the n8n workflow is connected.
+              {data.request.status === "processing" ? (
+                <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Your plan is being generated. This page updates automatically.</span>
+              ) : data.request.status === "failed" ? (
+                <span className="text-destructive">Plan generation failed. Please try again.</span>
+              ) : data.request.status === "completed" ? (
+                "The request is marked complete, but no saved plan was found."
+              ) : (
+                "This request has been saved. Click “Generate My Plan” to create your plan."
+              )}
             </div>
           )}
         </>

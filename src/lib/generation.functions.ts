@@ -31,13 +31,7 @@ export const triggerPlanGeneration = createServerFn({ method: "POST" })
       const res = await fetch(webhookUrl, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          request_id: req.id,
-          title: req.title,
-          description: req.description,
-          goal: req.goal,
-          additional_context: req.additional_context,
-        }),
+        body: JSON.stringify({ request_id: req.id }),
         signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) throw new Error(`n8n responded ${res.status}`);
