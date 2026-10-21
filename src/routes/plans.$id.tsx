@@ -8,6 +8,7 @@ import { StatusBadge, formatDate } from "@/components/StatusBadge";
 import { getProjectRequest } from "@/lib/plans.functions";
 import { triggerPlanGeneration } from "@/lib/generation.functions";
 import { parseList, parsePhases } from "@/lib/plan-shape";
+import { isAlreadyGenerated, isGenerationLocked } from "@/lib/generation-rules";
 
 const detailQuery = (id: string) =>
   queryOptions({ queryKey: ["project_request", id], queryFn: () => getProjectRequest({ data: { id } }) });
@@ -64,14 +65,18 @@ function Details() {
             <Field label="Description" value={data.request.description} />
             <Field label="Main goal" value={data.request.goal} />
             <Field label="Additional context" value={data.request.additional_context} />
-            <Button className="mt-6" onClick={() => gen.mutate()}
-              disabled={gen.isPending || data.request.status === "processing"}>
-              {gen.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Generate My Plan
-            </Button>
+            {!isAlreadyGenerated(data.request.status, !!data.plan) && (
+              <Button className="mt-6" onClick={() => { if (!gen.isPending) gen.mutate(); }}
+                disabled={gen.isPending || isGenerationLocked(data.request.status, data.request.updated_at)}>
+                {gen.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Generate My Plan
+              </Button>
+            )}
           </section>
-          {data.request.status === "completed" && data.plan ? <PlanView plan={data.plan} /> : (
+          {isAlreadyGenerated(data.request.status, !!data.plan) && data.plan ? <PlanView plan={data.plan} /> : (
             <div className="mt-6 rounded-2xl border border-dashed p-8 text-center text-muted-foreground">
-              {data.request.status === "processing" ? (
+              {data.request.status === "processing" && !isGenerationLocked(data.request.status, data.request.updated_at) ? (
+                <span className="text-destructive">This is taking much longer than expected. You can try again.</span>
+              ) : data.request.status === "processing" ? (
                 <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Your plan is being generated. This page updates automatically.</span>
               ) : data.request.status === "failed" ? (
                 <span className="text-destructive">Plan generation failed. Please try again.</span>
