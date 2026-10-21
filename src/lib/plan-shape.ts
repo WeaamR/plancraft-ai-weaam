@@ -1,10 +1,10 @@
 // Defensive parsing of AI-produced JSON stored in project_plans.
 export type Phase = {
-  title?: string;
-  objective?: string;
-  description?: string;
+  title?: string | undefined;
+  objective?: string | undefined;
+  description?: string | undefined;
   actions: string[];
-  priority?: string;
+  priority?: string | undefined;
 };
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
